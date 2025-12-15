@@ -107,11 +107,7 @@ st.markdown("""
             0 0 15px rgba(59, 130, 246, 0.8),
             0 0 30px rgba(59, 130, 246, 0.6),
             0 0 45px rgba(59, 130, 246, 0.4);
-        opacity: 0;
-    }
-    
-    .scan-line.active {
-        animation: scan 2.5s ease-in-out;
+        animation: scan 3s ease-in-out infinite;
     }
     
     .scan-grid {
@@ -124,11 +120,7 @@ st.markdown("""
             linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
             linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
         background-size: 20px 20px;
-        opacity: 0;
-    }
-    
-    .scan-grid.active {
-        animation: fadeInOut 2.5s ease-in-out;
+        animation: fadeInOut 3s ease-in-out infinite;
     }
     
     @keyframes scan {
@@ -277,10 +269,6 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Initialize session state
-if 'is_analyzing' not in st.session_state:
-    st.session_state.is_analyzing = False
-
 # Load model with caching
 @st.cache_resource
 def load_model():
@@ -318,7 +306,6 @@ with col1:
     # Clear results when new file is uploaded
     if uploaded_file and st.session_state.get('last_file_id') != id(uploaded_file):
         st.session_state.has_results = False
-        st.session_state.is_analyzing = False
         st.session_state.last_file_id = id(uploaded_file)
 
 with col2:
@@ -332,14 +319,12 @@ with col2:
         # Display image with scan animation overlay using HTML
         col2_1, col2_2, col2_3 = st.columns([1, 3, 1])
         with col2_2:
-            # Add 'active' class to trigger animation when analyzing
-            animation_class = "active" if st.session_state.is_analyzing else ""
             st.markdown(f"""
                 <div class="image-container">
                     <img src="{img_base64}" style="width: 100%; border-radius: 15px; display: block;">
                     <div class="scan-overlay">
-                        <div class="scan-grid {animation_class}"></div>
-                        <div class="scan-line {animation_class}"></div>
+                        <div class="scan-grid"></div>
+                        <div class="scan-line"></div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
@@ -354,16 +339,9 @@ if uploaded_file is not None:
         analyze_button = st.button("Analyze MRI Scan", use_container_width=True)
     
     if analyze_button:
-        # Start scan animation
-        st.session_state.is_analyzing = True
-        st.rerun()
-    
-    # Run prediction if analyzing
-    if st.session_state.is_analyzing:
+        # Show analyzing state with spinner and progress
         with st.spinner("Analyzing MRI scan..."):
-            # Allow time for scan animation to complete
-            time.sleep(2.5)
-            
+            # Preprocess and predict
             processed_image = preprocess_image(image)
             prediction = model.predict(processed_image, verbose=0)[0][0]
             
@@ -373,9 +351,6 @@ if uploaded_file is not None:
             st.session_state.prediction = prediction
             st.session_state.confidence = confidence
             st.session_state.has_results = True
-            
-            # Stop scan animation
-            st.session_state.is_analyzing = False
     
     # Display results if available
     if st.session_state.get('has_results', False):
